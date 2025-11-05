@@ -250,6 +250,18 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
               </div>
             </div>
             <p className="mt-2 text-white text-opacity-80">innrani.github.io/Caratify</p>
+
+            {/* Summary cards */}
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="bg-[#181818] rounded-lg p-4">
+                <p className="text-white/70 text-sm">Carat Level</p>
+                <p className="text-2xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">{userData.caratLevel || '-'}</p>
+              </div>
+              <div className="bg-[#181818] rounded-lg p-4">
+                <p className="text-white/70 text-sm">Estimated minutes</p>
+                <p className="text-2xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">{userData.totalMinutes.toLocaleString()}</p>
+              </div>
+            </div>
           </div>
 
           {/* Body: three sections */}
@@ -312,6 +324,9 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
               </div>
             </div>
           </div>
+
+          {/* Footer watermark */}
+          <div className="px-10 pb-6 text-center text-white/40 text-sm">Made with Caratify • innrani.github.io/Caratify</div>
         </div>
       )}
 
