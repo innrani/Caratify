@@ -3,8 +3,8 @@ export const spotifyConfig = {
   clientId: "adefef0cb2e14e139ee5bcb1ec9e47c4",
   clientSecret: "c1ab3e3638c84bbbb051fefa2783f302", 
   redirectUri: window.location.hostname === 'localhost' 
-    ? "http://localhost:3000/callback"
-    : "https://innrani.github.io/Caratify/callback",
+    ? "http://localhost:3000"
+    : "https://innrani.github.io/Caratify/",
   scopes: [
     "user-top-read",
     "user-read-recently-played",
