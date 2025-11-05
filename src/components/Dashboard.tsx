@@ -41,23 +41,33 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const captureRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [showExport, setShowExport] = useState(false);
 
   const handleDownloadImage = async () => {
-    if (captureRef.current === null) return;
-    
     try {
-      const dataUrl = await toPng(captureRef.current, {
+      // Render export-only layout, then capture it
+      setShowExport(true);
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50)));
+
+      if (!exportRef.current) return;
+
+      const dataUrl = await toPng(exportRef.current, {
         cacheBust: true,
         backgroundColor: '#000000',
-        pixelRatio: 2
+        pixelRatio: 2,
+        width: 1080,
+        height: 1350, // 4:5 (Instagram portrait)
       });
-      
+
       const link = document.createElement('a');
-      link.download = 'my-seventeen-stats.png';
+      link.download = 'caratify-top5.png';
       link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error('Error generating image:', err);
+    } finally {
+      setShowExport(false);
     }
   };
 
@@ -211,6 +221,99 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           </div>
         )}
       </div>
+
+      {/* Export-only layout (Top 5 of each) for saving as image */}
+      {showExport && (
+        <div
+          ref={exportRef}
+          style={{
+            position: 'fixed',
+            top: -99999,
+            left: -99999,
+            width: 1080,
+            height: 1350,
+            backgroundColor: '#000',
+          }}
+          className="text-white"
+        >
+          {/* Header gradient */}
+          <div className="bg-gradient-to-b from-[#1db954] to-black px-10 pt-10 pb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-3">
+                  <img src={imgSeventeenLogo} alt="SEVENTEEN" className="w-full h-full object-contain filter invert" />
+                </div>
+                <h1 className="text-4xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">Caratify</h1>
+              </div>
+              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-3">
+                <img src={imgSpotifyIconRgbGreen1} alt="Spotify" className="w-full h-full object-contain" />
+              </div>
+            </div>
+            <p className="mt-2 text-white text-opacity-80">innrani.github.io/Caratify</p>
+          </div>
+
+          {/* Body: three sections */}
+          <div className="px-10 py-6 grid grid-cols-1 gap-6">
+            {/* Top 5 Songs */}
+            <div>
+              <h2 className="text-[#1db954] text-xl font-['Montserrat:ExtraBold',sans-serif] mb-3">Top 5 Songs</h2>
+              <div className="space-y-3">
+                {(userData.topTracks || []).slice(0,5).map((track: any, idx: number) => (
+                  <div key={track.id || idx} className="flex items-center gap-3">
+                    <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
+                    <div className="w-14 h-14 bg-[#282828] rounded overflow-hidden flex-shrink-0">
+                      {track?.album?.images?.length ? (
+                        <img src={track.album.images[track.album.images.length - 1].url} alt={track.album?.name || 'cover'} className="w-full h-full object-cover" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-['Montserrat:SemiBold',sans-serif] truncate">{track?.name}</p>
+                      <p className="text-sm text-white text-opacity-60 truncate">{(track?.artists||[]).map((a:any)=>a.name).join(', ')}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top 5 Albums */}
+            <div>
+              <h2 className="text-[#1db954] text-xl font-['Montserrat:ExtraBold',sans-serif] mb-3">Top 5 Albums</h2>
+              <div className="space-y-3">
+                {(userData.topAlbums || []).slice(0,5).map((al: any, idx: number) => (
+                  <div key={al.name + idx} className="flex items-center gap-3">
+                    <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
+                    <div className="w-14 h-14 bg-[#282828] rounded overflow-hidden flex-shrink-0">
+                      {al?.image ? (
+                        <img src={al.image} alt={al.name} className="w-full h-full object-cover" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-['Montserrat:SemiBold',sans-serif] truncate">{al?.name}</p>
+                      <p className="text-sm text-white text-opacity-60 truncate">{al?.tracks?.length || 0} tracks</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top 5 Units */}
+            <div>
+              <h2 className="text-[#1db954] text-xl font-['Montserrat:ExtraBold',sans-serif] mb-3">Top 5 Units</h2>
+              <div className="space-y-2">
+                {((userData.unitsList || []).slice().sort((a:any,b:any)=> (b?.count||0) - (a?.count||0)).slice(0,5)).map((u:any, idx:number)=>(
+                  <div key={(u?.name||'unit')+idx} className="flex items-center gap-3">
+                    <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
+                    <p className="truncate">
+                      <span className="font-['Montserrat:SemiBold',sans-serif]">{u?.name || 'Unknown'}</span>
+                      <span className="ml-2 text-sm text-white text-opacity-60">{u?.count || 0} songs</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="px-6 -mt-4 space-y-4 mb-6">
