@@ -180,11 +180,12 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
 
       {/* Capturable Content */}
       <div ref={captureRef}>
-        <div className="bg-gradient-to-b from-[#1db954] to-black pt-8 pb-8 px-6">
+        {/* Remove secondary gradient: keep a single header gradient only */}
+        <div className="px-6">
         
         {/* First Listen Info */}
         {userData.timeSinceFirstListen && (
-          <div className="mt-10 bg-black bg-opacity-40 rounded-lg p-4">
+          <div className="mt-4 bg-black bg-opacity-40 rounded-lg p-4">
             <p className="text-white text-opacity-90 font-['Montserrat:SemiBold',sans-serif] text-center text-base">
               💎 The first time you listened to SEVENTEEN was{' '}
               <button 
