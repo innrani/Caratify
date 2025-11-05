@@ -4,6 +4,9 @@
   import path from 'path';
 
   export default defineConfig({
+    // Base path for GitHub Pages (assumed repo name 'Caratify').
+    // If your repo name is different, change this to '/SEU_REPO/'.
+    base: '/Caratify/',
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
