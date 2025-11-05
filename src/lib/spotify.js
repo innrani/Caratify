@@ -4,7 +4,7 @@ export const spotifyConfig = {
   clientSecret: "c1ab3e3638c84bbbb051fefa2783f302", 
   redirectUri: window.location.hostname === 'localhost' 
     ? "http://localhost:3000/callback"
-    : `${window.location.origin}/callback`,
+    : "https://innrani.github.io/Caratify/callback",
   scopes: [
     "user-top-read",
     "user-read-recently-played",
