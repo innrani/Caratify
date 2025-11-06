@@ -11,7 +11,10 @@ export function About({ onBack }: AboutProps) {
   return (
     <div className="min-h-screen bg-black">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#1db954] to-black pt-8 pb-16 px-6">
+      <div 
+        className="bg-gradient-to-b from-[#1db954] to-black pt-8 pb-16 px-6"
+        style={{ ['--tw-gradient-from-position' as any]: '60%' }}
+      >
         <button 
           onClick={onBack}
           className="flex items-center gap-2 text-white text-opacity-80 hover:text-opacity-100 mb-6"
@@ -170,12 +173,12 @@ export function About({ onBack }: AboutProps) {
         </Card>
 
         {/* Credits */}
-        <Card className="bg-gradient-to-r from-[#1db954] to-[#1ed760] border-none p-6">
+        <Card className="bg-gradient-to-r from-[#1db954] to-[#1ed760] border-none p-6" style={{ color: '#ffffff' }}>
           <div className="text-center">
-            <p className="text-black font-['Montserrat:ExtraBold',sans-serif] font-extrabold text-lg mb-2">
+            <p className="font-['Montserrat:ExtraBold',sans-serif] font-extrabold text-lg mb-2">
               Made with 💎 for CARATs
             </p>
-            <p className="text-black text-opacity-80 font-['Montserrat:Medium',sans-serif]">
+            <p className="font-['Montserrat:Medium',sans-serif]" style={{ opacity: 0.9 }}>
               made by @damagebyhoshi on twt (x), you can also find me on ig by @haruathedisco
             </p>
           </div>

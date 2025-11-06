@@ -8,6 +8,7 @@
             "class-variance-authority": "^0.7.1",
             "clsx": "*",
             "html-to-image": "^1.11.13",
+            "html2canvas": "^1.4.1",
             "lucide-react": "^0.487.0",
             "react": "^18.3.1",
             "react-dom": "^18.3.1",

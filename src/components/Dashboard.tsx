@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Music, Album, Clock, Trophy, Download } from 'lucide-react';
-import { toPng } from 'html-to-image';
+// import { toPng } from 'html-to-image'; // kept for potential future fallback
 import imgSeventeenLogo from '../assets/e84bdcd9518a5176b49e35565aeab2227bae9fb8.png';
 import imgSpotifyIconRgbGreen1 from '../assets/3f5307bc3f8e6eaf876598d93b353dba861d6964.png';
 import { 
@@ -13,6 +13,7 @@ import {
   getTimeSince, 
   calculateCaratLevel 
 } from '../lib/spotify';
+import { exportStatsImage } from '../lib/exportCanvas';
 
 // Interfaces para tipagem
 interface UserData {
@@ -42,32 +43,23 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
   const [error, setError] = useState<string | null>(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
-  const [showExport, setShowExport] = useState(false);
+  const [showExport] = useState(false); // legacy flag for old export flow
 
   const handleDownloadImage = async () => {
     try {
-      // Render export-only layout, then capture it
-      setShowExport(true);
-      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50)));
-
-      if (!exportRef.current) return;
-
-      const dataUrl = await toPng(exportRef.current, {
-        cacheBust: true,
-        backgroundColor: '#000000',
-        pixelRatio: 2,
-        width: 1080,
-        height: 1350, // 4:5 (Instagram portrait)
-      });
-
-      const link = document.createElement('a');
-      link.download = 'caratify-top5.png';
-      link.href = dataUrl;
-      link.click();
+      await exportStatsImage(
+        {
+          caratLevel: userData.caratLevel,
+          totalMinutes: userData.totalMinutes,
+          topTracks: userData.topTracks,
+          topAlbums: userData.topAlbums,
+          unitsList: userData.unitsList,
+        },
+        { seventeen: imgSeventeenLogo, spotify: imgSpotifyIconRgbGreen1 },
+        { filename: 'caratify-top5.png' }
+      );
     } catch (err) {
       console.error('Error generating image:', err);
-    } finally {
-      setShowExport(false);
     }
   };
 
@@ -144,7 +136,10 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
   return (
     <div className="min-h-screen bg-black">
       {/* Header */}
-      <div className="bg-gradient-to-b from-[#1db954] to-black pt-8 pb-8 px-6">
+      <div
+        className="bg-gradient-to-b from-[#16a34a] to-black pt-8 pb-8 px-6"
+        style={{ ['--tw-gradient-from-position' as any]: '60%' }}
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-2">
@@ -162,10 +157,10 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button 
               onClick={handleDownloadImage}
-              className="text-[#1db954] hover:text-[#1ed760] transition-colors flex items-center gap-2 font-['Montserrat:Medium',sans-serif]"
+              className="bg-black text-white border border-white/20 hover:bg-black/80 transition-colors flex items-center gap-3 px-4 py-2 rounded-full font-['Montserrat:Medium',sans-serif]"
               title="Download stats as image"
             >
               <Download className="w-5 h-5" />
@@ -213,7 +208,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
             <button
               onClick={onShowAbout}
               className="mt-2 w-full text-center text-white text-opacity-60 hover:text-opacity-80 transition-colors underline"
-              style={{ fontSize: '0.5rem', lineHeight: '1rem' }}
+              style={{ fontSize: '0.8rem', lineHeight: '1rem' }}
               aria-label="Learn why this info is limited by Spotify"
             >
               ℹ️ Learn why this info is limited by Spotify
@@ -228,8 +223,9 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           ref={exportRef}
           style={{
             position: 'fixed',
-            top: -99999,
-            left: -99999,
+            top: 0,
+            left: -2000,
+            pointerEvents: 'none',
             width: 1080,
             height: 1350,
             backgroundColor: '#000',
@@ -237,16 +233,21 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           className="text-white"
         >
           {/* Header gradient */}
-          <div className="bg-gradient-to-b from-[#1db954] to-black px-10 pt-10 pb-8">
+          <div
+            className="px-10 pt-10 pb-8"
+            style={{
+              backgroundImage: 'linear-gradient(to bottom, #16a34a 0%, #000000 100%)',
+            }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-3">
-                  <img src={imgSeventeenLogo} alt="SEVENTEEN" className="w-full h-full object-contain filter invert" />
+                  <img crossOrigin="anonymous" src={imgSeventeenLogo} alt="SEVENTEEN" className="w-full h-full object-contain" />
                 </div>
                 <h1 className="text-4xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">Caratify</h1>
               </div>
               <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-3">
-                <img src={imgSpotifyIconRgbGreen1} alt="Spotify" className="w-full h-full object-contain" />
+                <img crossOrigin="anonymous" src={imgSpotifyIconRgbGreen1} alt="Spotify" className="w-full h-full object-contain" />
               </div>
             </div>
             <p className="mt-2 text-white text-opacity-80">innrani.github.io/Caratify</p>
@@ -275,7 +276,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
                     <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
                     <div className="w-14 h-14 bg-[#282828] rounded overflow-hidden flex-shrink-0">
                       {track?.album?.images?.length ? (
-                        <img src={track.album.images[track.album.images.length - 1].url} alt={track.album?.name || 'cover'} className="w-full h-full object-cover" />
+                        <img crossOrigin="anonymous" src={track.album.images[track.album.images.length - 1].url} alt={track.album?.name || 'cover'} className="w-full h-full object-cover" />
                       ) : null}
                     </div>
                     <div className="min-w-0">
@@ -296,7 +297,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
                     <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
                     <div className="w-14 h-14 bg-[#282828] rounded overflow-hidden flex-shrink-0">
                       {al?.image ? (
-                        <img src={al.image} alt={al.name} className="w-full h-full object-cover" />
+                        <img crossOrigin="anonymous" src={al.image} alt={al.name} className="w-full h-full object-cover" />
                       ) : null}
                     </div>
                     <div className="min-w-0">
@@ -333,13 +334,13 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
       {/* Stats Cards */}
       <div className="px-6 -mt-4 space-y-4 mb-6">
         <Card className="bg-[#181818] border-none p-6">
-          <div className="flex items-center gap-4 mb-2">
+          <div className="flex items-center gap-3 mb-1">
             <Trophy className="text-[#1db954] w-6 h-6" />
             <h3 className="text-white font-['Montserrat:ExtraBold',sans-serif] font-extrabold">
               Carat Level
             </h3>
           </div>
-          <p className="text-white text-3xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">
+          <p className="text-white text-3xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold mt-0">
             {userData.caratLevel}
           </p>
           <p className="text-white text-opacity-60 font-['Montserrat:Medium',sans-serif] mt-1">
@@ -395,6 +396,9 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           </TabsList>
 
           <TabsContent value="tracks" className="space-y-3">
+            <h4 className="text-white text-lg font-['Montserrat:SemiBold',sans-serif] mb-4">
+              🎵 Your SEVENTEEN Top Songs (All Time)
+            </h4>
             {userData.topTracks.length > 0 ? (
               userData.topTracks.map((track, index) => (
                 <Card key={track.id} className="bg-[#181818] border-none p-4">
@@ -502,34 +506,37 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           </TabsContent>
 
           <TabsContent value="units" className="space-y-3">
-            <h4 className="text-white text-lg font-['Montserrat:SemiBold',sans-serif] mb-4">
+            <h4 className="text-white text-2xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold mb-6 mt-2">
               💎 Your Favourite SEVENTEEN Unit
             </h4>
             {userData.topUnit ? (
-              <Card className="bg-gradient-to-r from-[#1db954] to-[#1ed760] border-none p-6 mb-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <img 
-                      alt="SEVENTEEN" 
-                      className="w-6 h-6 object-contain filter invert" 
-                      src={imgSeventeenLogo} 
-                    />
-                    <span className="text-black text-xl">+</span>
-                    <img 
-                      alt="Spotify" 
-                      className="w-6 h-6 object-contain" 
-                      src={imgSpotifyIconRgbGreen1} 
-                    />
+              <Card className="bg-gradient-to-r from-[#1db954] to-[#1ed760] border-none p-6 mb-4 text-white">
+                <div className="flex items-center gap-4">
+                  {userData.topUnit.tracks && userData.topUnit.tracks.length > 0 && (() => {
+                    const topTrack = userData.topTracks.find((t: any) => 
+                      userData.topUnit?.tracks.includes(t.name)
+                    );
+                    return topTrack?.album?.images?.length ? (
+                      <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                        <img 
+                          src={topTrack.album.images[0].url} 
+                          alt={topTrack.album.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : null;
+                  })()}
+                  <div className="flex-1">
+                    <h3 className="font-['Montserrat:ExtraBold',sans-serif] font-extrabold text-2xl mb-1" style={{ color: '#ffffff' }}>
+                      {userData.topUnit.name}
+                    </h3>
+                    <p className="font-['Montserrat:Bold',sans-serif]" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                      {userData.topUnit.count} {userData.topUnit.count === 1 ? 'track' : 'tracks'} in your top 50
+                    </p>
+                    <p className="font-['Montserrat:Medium',sans-serif] text-sm mt-1" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                      This is your favorite unit! 🎉
+                    </p>
                   </div>
-                  <h3 className="text-black font-['Montserrat:ExtraBold',sans-serif] font-extrabold text-xl mb-2">
-                    {userData.topUnit.name}
-                  </h3>
-                  <p className="text-black text-opacity-80 font-['Montserrat:SemiBold',sans-serif]">
-                    {userData.topUnit.count} {userData.topUnit.count === 1 ? 'track' : 'tracks'} in your top 50
-                  </p>
-                  <p className="text-black text-opacity-60 font-['Montserrat:Medium',sans-serif] text-sm mt-2">
-                    This is your favorite unit! 🎉
-                  </p>
                 </div>
               </Card>
             ) : (
@@ -553,33 +560,50 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
               </Card>
             )}
 
-            <div className="mt-6">
+            <div className="mt-15">
               <p className="text-white text-opacity-70 font-['Montserrat:Medium',sans-serif] text-sm mb-4 text-center">
-                According to your top 50 tracks, these are your favorite units
+                According to your top 50 tracks, these are your favourite units
               </p>
               
               {userData.unitsList && userData.unitsList.length > 0 ? (
                 <div className="space-y-3 mb-4">
-                  {userData.unitsList.map((unit, index) => (
-                    <Card key={unit.name} className="bg-[#181818] border-none p-4">
-                      <div className="flex items-center gap-4">
-                        <span className="text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif] font-extrabold w-6">
-                          {index + 1}
-                        </span>
-                        <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Music className="w-5 h-5 text-white" />
+                  {userData.unitsList.map((unit, index) => {
+                    const topTrack = userData.topTracks.find((t: any) => 
+                      unit.tracks && unit.tracks.includes(t.name)
+                    );
+                    const albumImage = topTrack?.album?.images?.[0]?.url;
+                    
+                    return (
+                      <Card key={unit.name} className="bg-[#181818] border-none p-4">
+                        <div className="flex items-center gap-4">
+                          <span className="text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif] font-extrabold w-6">
+                            {index + 1}
+                          </span>
+                          {albumImage ? (
+                            <div className="w-14 h-14 rounded overflow-hidden flex-shrink-0">
+                              <img 
+                                src={albumImage} 
+                                alt={topTrack.album.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded flex items-center justify-center flex-shrink-0">
+                              <Music className="w-6 h-6 text-white" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <p className="text-white font-['Montserrat:SemiBold',sans-serif] font-semibold">
+                              {unit.name}
+                            </p>
+                            <p className="text-[#1db954] font-['Montserrat:SemiBold',sans-serif] text-sm">
+                              {unit.count} {unit.count === 1 ? 'track' : 'tracks'} in your top 50
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-white font-['Montserrat:SemiBold',sans-serif] font-semibold">
-                            {unit.name}
-                          </p>
-                          <p className="text-[#1db954] font-['Montserrat:SemiBold',sans-serif] text-sm">
-                            {unit.count} {unit.count === 1 ? 'track' : 'tracks'} in your top 50
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <Card className="bg-[#181818] border-none p-4 mb-4">
@@ -592,9 +616,9 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
                 </Card>
               )}
 
-              <div className="grid grid-cols-1 gap-2 mt-6">
+              <div className="grid grid-cols-1 gap-2 mt-8">
                 <div className="text-white text-opacity-40 text-sm bg-[#181818] rounded-lg p-4">
-                  <p className="mb-2 text-white text-opacity-60">💡 <strong>SEVENTEEN Units:</strong></p>
+                  <p className="mb-4 text-white text-opacity-60">💡 <strong>SEVENTEEN Units:</strong></p>
                   <p className="text-white text-opacity-70">• <strong>BSS (BOOSEOKSOON)</strong> - Hoshi, DK, Seungkwan</p>
                   <p className="text-white text-opacity-70">• <strong>JxW (JeonghanxWonwoo)</strong> - Jeonghan, Wonwoo</p>
                   <p className="text-white text-opacity-70">• <strong>HxW (HoshixWoozi)</strong> - Hoshi, Woozi</p>
