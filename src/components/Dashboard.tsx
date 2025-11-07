@@ -6,12 +6,12 @@ import { Music, Album, Clock, Trophy, Download } from 'lucide-react';
 import imgSeventeenLogo from '../assets/e84bdcd9518a5176b49e35565aeab2227bae9fb8.png';
 import imgSpotifyIconRgbGreen1 from '../assets/3f5307bc3f8e6eaf876598d93b353dba861d6964.png';
 import { 
-  getTopTracks, 
-  getTopAlbums, 
-  analyzeSeventeenUnits, 
-  getFirstSeventeenListen, 
-  getTimeSince, 
-  calculateCaratLevel 
+  getTopTracks,
+  computeTopAlbumsFromTracks,
+  analyzeSeventeenUnitsFromTracks,
+  estimateFirstSeventeenListenFromTracks,
+  getTimeSince,
+  calculateCaratLevel
 } from '../lib/spotify';
 import { exportStatsImage } from '../lib/exportCanvas';
 
@@ -72,12 +72,11 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
       setError(null);
 
       try {
-        const [topTracks, topAlbums, unitAnalysis, firstListenDate] = await Promise.all([
-          getTopTracks(accessToken, 'long_term'),
-          getTopAlbums(accessToken),
-          analyzeSeventeenUnits(accessToken),
-          getFirstSeventeenListen(accessToken)
-        ]);
+        // Fetch user's SEVENTEEN top tracks ONCE, then derive other stats locally
+        const topTracks = await getTopTracks(accessToken, 'long_term');
+        const topAlbums = computeTopAlbumsFromTracks(topTracks);
+        const unitAnalysis = analyzeSeventeenUnitsFromTracks(topTracks);
+        const firstListenDate = estimateFirstSeventeenListenFromTracks(topTracks);
 
         const totalMinutes = Math.round(
           topTracks.reduce((sum: number, t: any) => sum + (t.duration_ms || 0), 0) / 60000

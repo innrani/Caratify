@@ -21,11 +21,38 @@ export const getAuthUrl = () => {
   });
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
 };
+// Small helper to make Spotify requests more resilient (retry once on 401/429/transient errors)
+const spotifyFetch = async (url, accessToken, opts = {}) => {
+  const { retries = 1, retryDelayMs = 600 } = opts;
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) return res;
+      // Retry on rate limit or auth hiccup once
+      if ((res.status === 401 || res.status === 429 || res.status >= 500) && attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+        continue;
+      }
+      throw new Error(`Spotify API error: ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+      }
+    }
+  }
+  throw lastErr || new Error('Spotify API request failed');
+};
+
 export const getTopTracks = async (accessToken, timeRange = "long_term") => {
-  const response = await fetch(`https://api.spotify.com/v1/me/top/tracks?time_range=${timeRange}&limit=50`, {
-    headers: { "Authorization": `Bearer ${accessToken}` }
-  });
-  if (!response.ok) throw new Error(`Spotify API error: ${response.status}`);
+  const response = await spotifyFetch(
+    `https://api.spotify.com/v1/me/top/tracks?time_range=${timeRange}&limit=50`,
+    accessToken,
+    { retries: 1 }
+  );
   const data = await response.json();
   
   // Lista de todos os nomes relacionados ao SEVENTEEN (grupo, units e membros individuais)
@@ -62,9 +89,11 @@ export const getTopArtists = async (accessToken) => {
   return { seventeen, allArtists: data.items };
 };
 export const getRecentlyPlayed = async (accessToken) => {
-  const response = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=50", {
-    headers: { "Authorization": `Bearer ${accessToken}` }
-  });
+  const response = await spotifyFetch(
+    "https://api.spotify.com/v1/me/player/recently-played?limit=50",
+    accessToken,
+    { retries: 1 }
+  );
   if (!response.ok) return [];
   const data = await response.json();
   
@@ -88,8 +117,7 @@ export const getRecentlyPlayed = async (accessToken) => {
   );
   return seventeenTracks;
 };
-export const getTopAlbums = async (accessToken) => {
-  const topTracks = await getTopTracks(accessToken, "long_term");
+export const computeTopAlbumsFromTracks = (topTracks = []) => {
   const albumCounts = {};
   topTracks.forEach(track => {
     const albumName = track.album.name;
@@ -107,8 +135,7 @@ export const getTopAlbums = async (accessToken) => {
     .slice(0, 10);
   return topAlbums;
 };
-export const analyzeSeventeenUnits = async (accessToken) => {
-  const topTracks = await getTopTracks(accessToken, "long_term");
+export const analyzeSeventeenUnitsFromTracks = (topTracks = []) => {
   const unitCounts = { 
     "BSS": { count: 0, tracks: [], totalMinutes: 0 }, 
     "JxW": { count: 0, tracks: [], totalMinutes: 0 },
@@ -142,8 +169,7 @@ export const analyzeSeventeenUnits = async (accessToken) => {
   const unitsArray = Object.entries(unitCounts).map(([name, data]) => ({ name, ...data })).filter(unit => unit.count > 0).sort((a, b) => b.totalMinutes - a.totalMinutes);
   return { topUnit: unitsArray[0] || null, allUnits: unitCounts, unitsList: unitsArray };
 };
-export const getFirstSeventeenListen = async (accessToken) => {
-  const topTracks = await getTopTracks(accessToken, "long_term");
+export const estimateFirstSeventeenListenFromTracks = (topTracks = []) => {
   if (topTracks.length > 40) return new Date(new Date().setFullYear(new Date().getFullYear() - 4));
   if (topTracks.length > 30) return new Date(new Date().setFullYear(new Date().getFullYear() - 3));
   if (topTracks.length > 20) return new Date(new Date().setFullYear(new Date().getFullYear() - 2));
