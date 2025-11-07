@@ -1,7 +1,6 @@
 ﻿// Configuração da API do Spotify
 export const spotifyConfig = {
   clientId: "adefef0cb2e14e139ee5bcb1ec9e47c4",
-  clientSecret: "c1ab3e3638c84bbbb051fefa2783f302", 
   redirectUri: window.location.hostname === 'localhost' 
     ? "http://localhost:3000"
     : "https://innrani.github.io/Caratify/",
@@ -36,7 +35,16 @@ const spotifyFetch = async (url, accessToken, opts = {}) => {
         await new Promise((r) => setTimeout(r, retryDelayMs));
         continue;
       }
-      throw new Error(`Spotify API error: ${res.status}`);
+      if (res.status === 401) {
+        const e = new Error('AUTH_EXPIRED');
+        // @ts-ignore
+        e.status = 401;
+        throw e;
+      }
+      const e = new Error(`Spotify API error: ${res.status}`);
+      // @ts-ignore
+      e.status = res.status;
+      throw e;
     } catch (err) {
       lastErr = err;
       if (attempt < retries) {

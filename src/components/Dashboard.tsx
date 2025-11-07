@@ -11,7 +11,8 @@ import {
   analyzeSeventeenUnitsFromTracks,
   estimateFirstSeventeenListenFromTracks,
   getTimeSince,
-  calculateCaratLevel
+  calculateCaratLevel,
+  getAuthUrl,
 } from '../lib/spotify';
 import { exportStatsImage } from '../lib/exportCanvas';
 
@@ -44,6 +45,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
   const captureRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [showExport] = useState(false); // legacy flag for old export flow
+  const [sessionMessage, setSessionMessage] = useState<string | null>(null);
 
   const handleDownloadImage = async () => {
     try {
@@ -94,8 +96,23 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           firstListenDate,
           timeSinceFirstListen: timeSince
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error('❌ Error fetching Spotify data:', err);
+        // Auto-recover on 401 token expiry
+        if (err?.status === 401 || err?.message === 'AUTH_EXPIRED') {
+          try {
+            setSessionMessage('Session expired. Reconnecting to Spotify…');
+            // Clear token and timestamp
+            localStorage.removeItem('spotify_access_token');
+            localStorage.removeItem('spotify_token_timestamp');
+            // Redirect to Spotify auth quickly
+            const authUrl = getAuthUrl();
+            setTimeout(() => { window.location.href = authUrl; }, 400);
+            return;
+          } catch (e) {
+            // Fallback: show standard error
+          }
+        }
         setError('Error loading Spotify data. Please try logging in again.');
       } finally {
         setLoading(false);
@@ -110,7 +127,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1db954] mx-auto mb-4"></div>
-          <p>Loading your Spotify data...</p>
+          <p>{sessionMessage || 'Loading your Spotify data...'}</p>
         </div>
       </div>
     );
