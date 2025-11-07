@@ -26,7 +26,7 @@ Um aplicativo web que mostra suas estatísticas do Spotify focado no grupo SEVEN
 1. Acesse [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Clique em "Create an App"
 3. Preencha os dados do seu app
-4. Em "Redirect URIs", adicione: `http://localhost:5173/callback`
+4. Em "Redirect URIs", adicione: `http://localhost:3000/callback`
 5. Salve e copie o **Client ID** e **Client Secret**
 
 ### 3. Configuração do Projeto
@@ -50,7 +50,7 @@ cp .env.example .env
 # Edite o arquivo .env com suas credenciais reais
 VITE_SPOTIFY_CLIENT_ID=seu_client_id_aqui
 VITE_SPOTIFY_CLIENT_SECRET=seu_client_secret_aqui
-VITE_SPOTIFY_REDIRECT_URI=http://localhost:5173/callback
+VITE_SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
 ```
 
 ### 4. Executar o Projeto
@@ -59,7 +59,7 @@ VITE_SPOTIFY_REDIRECT_URI=http://localhost:5173/callback
 npm run dev
 ```
 
-O projeto estará disponível em `http://localhost:5173`
+O projeto estará disponível em `http://localhost:3000`
 
 ## 🔒 Segurança
 
@@ -83,16 +83,6 @@ src/
 └── main.tsx              # Ponto de entrada
 ```
 
-## 🎯 Níveis Carat
-
-O aplicativo calcula seu nível de Carat baseado no tempo estimado de escuta:
-
-- 🐣 **Baby Carat**: < 100 minutos
-- 🌱 **Growing Carat**: 100-499 minutos  
-- 💎 **True Carat**: 500-999 minutos
-- 💍 **Diamond Carat**: 1000-4999 minutos
-- 👑 **Ultimate Carat**: 5000+ minutos
-
 ## 🚀 Tecnologias
 
 - **React 18** com TypeScript
@@ -109,15 +99,5 @@ O aplicativo calcula seu nível de Carat baseado no tempo estimado de escuta:
 3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto é licenciado sob a MIT License - veja o arquivo LICENSE para detalhes.
-
-## 💜 Créditos
-
-Criado com muito amor pelos CARATs para CARATs! 
-
----
 
 **Nota**: Este é um projeto não-oficial e não tem afiliação com o SEVENTEEN ou PLEDIS Entertainment.  
