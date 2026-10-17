@@ -179,7 +179,7 @@ export function About({ onBack }: AboutProps) {
               Made with 💎 for CARATs
             </p>
             <p className="font-['Montserrat:Medium',sans-serif]" style={{ opacity: 0.9 }}>
-              made by @damagebyhoshi on twt (x), you can also find me on ig by @haruathedisco
+              made by @damagebyhoshi on twt (x)
             </p>
           </div>
         </Card>
