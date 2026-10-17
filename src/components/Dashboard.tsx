@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Music, Album, Clock, Trophy, Download } from 'lucide-react';
-// import { toPng } from 'html-to-image'; // kept for potential future fallback
 import imgSeventeenLogo from '../assets/e84bdcd9518a5176b49e35565aeab2227bae9fb8.png';
 import imgSpotifyIconRgbGreen1 from '../assets/3f5307bc3f8e6eaf876598d93b353dba861d6964.png';
 import { 
@@ -16,14 +15,39 @@ import {
 } from '../lib/spotify';
 import { exportStatsImage } from '../lib/exportCanvas';
 
-// Interfaces para tipagem
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  duration_ms: number;
+  artists: Array<{ name: string }>;
+  album: {
+    name: string;
+    images: Array<{ url: string }>;
+  };
+}
+
+interface TopAlbum {
+  name: string;
+  image?: string;
+  count: number;
+  tracks: string[];
+  totalMinutes: number;
+}
+
+interface UnitStats {
+  name: string;
+  count: number;
+  tracks: string[];
+  totalMinutes: number;
+}
+
 interface UserData {
-  topTracks: any[];
-  topAlbums: Array<{ name: string; image?: string; count: number; tracks: string[]; totalMinutes: number }>;
+  topTracks: SpotifyTrack[];
+  topAlbums: TopAlbum[];
   totalMinutes: number;
   caratLevel?: string;
-  topUnit?: { name?: string; count: number; tracks: string[]; totalMinutes: number } | null;
-  unitsList?: Array<{ name?: string; count: number; tracks: string[]; totalMinutes: number }>;
+  topUnit?: UnitStats | null;
+  unitsList?: UnitStats[];
   firstListenDate?: Date;
   timeSinceFirstListen?: string;
 }
@@ -42,9 +66,6 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const captureRef = useRef<HTMLDivElement>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
-  const [showExport] = useState(false); // legacy flag for old export flow
   const [sessionMessage, setSessionMessage] = useState<string | null>(null);
 
   const handleDownloadImage = async () => {
@@ -81,7 +102,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
         const firstListenDate = estimateFirstSeventeenListenFromTracks(topTracks);
 
         const totalMinutes = Math.round(
-          topTracks.reduce((sum: number, t: any) => sum + (t.duration_ms || 0), 0) / 60000
+          topTracks.reduce((sum: number, track: SpotifyTrack) => sum + track.duration_ms, 0) / 60000
         );
         const caratLevel = calculateCaratLevel(totalMinutes);
         const timeSince = firstListenDate ? getTimeSince(firstListenDate) : undefined;
@@ -96,21 +117,29 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           firstListenDate,
           timeSinceFirstListen: timeSince
         });
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ Error fetching Spotify data:', err);
         // Auto-recover on 401 token expiry
-        if (err?.status === 401 || err?.message === 'AUTH_EXPIRED') {
+        const isAuthExpired = err instanceof Error && (
+          err.message === 'AUTH_EXPIRED' ||
+          ('status' in err && err.status === 401)
+        );
+        if (isAuthExpired) {
           try {
             setSessionMessage('Session expired. Reconnecting to Spotify…');
             // Clear token and timestamp
             localStorage.removeItem('spotify_access_token');
             localStorage.removeItem('spotify_token_timestamp');
             // Redirect to Spotify auth quickly
-            const authUrl = getAuthUrl();
-            setTimeout(() => { window.location.href = authUrl; }, 400);
+            const authUrl = await getAuthUrl();
+            window.location.href = authUrl;
             return;
-          } catch (e) {
-            // Fallback: show standard error
+          } catch (authError) {
+            console.error('❌ Could not restart Spotify authentication:', authError);
+            setError(authError instanceof Error
+              ? authError.message
+              : 'Could not restart Spotify authentication.');
+            return;
           }
         }
         setError('Error loading Spotify data. Please try logging in again.');
@@ -153,8 +182,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
     <div className="min-h-screen bg-black">
       {/* Header */}
       <div
-        className="bg-gradient-to-b from-[#16a34a] to-black pt-8 pb-8 px-6"
-        style={{ ['--tw-gradient-from-position' as any]: '60%' }}
+        className="bg-gradient-to-b from-[#16a34a] from-[60%] to-black pt-8 pb-8 px-6"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -199,10 +227,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
         </p>
       </div>
 
-      {/* Capturable Content */}
-      <div ref={captureRef}>
-        {/* Remove secondary gradient: keep a single header gradient only */}
-        <div className="px-6">
+      <div className="px-6">
         
         {/* First Listen Info */}
         {userData.timeSinceFirstListen && (
@@ -232,120 +257,6 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           </div>
         )}
       </div>
-
-      {/* Export-only layout (Top 5 of each) for saving as image */}
-      {showExport && (
-        <div
-          ref={exportRef}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: -2000,
-            pointerEvents: 'none',
-            width: 1080,
-            height: 1350,
-            backgroundColor: '#000',
-          }}
-          className="text-white"
-        >
-          {/* Header gradient */}
-          <div
-            className="px-10 pt-10 pb-8"
-            style={{
-              backgroundImage: 'linear-gradient(to bottom, #16a34a 0%, #000000 100%)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-3">
-                  <img crossOrigin="anonymous" src={imgSeventeenLogo} alt="SEVENTEEN" className="w-full h-full object-contain" />
-                </div>
-                <h1 className="text-4xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">Caratify</h1>
-              </div>
-              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center p-3">
-                <img crossOrigin="anonymous" src={imgSpotifyIconRgbGreen1} alt="Spotify" className="w-full h-full object-contain" />
-              </div>
-            </div>
-            <p className="mt-2 text-white text-opacity-80">innrani.github.io/Caratify</p>
-
-            {/* Summary cards */}
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="bg-[#181818] rounded-lg p-4">
-                <p className="text-white/70 text-sm">Carat Level</p>
-                <p className="text-2xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">{userData.caratLevel || '-'}</p>
-              </div>
-              <div className="bg-[#181818] rounded-lg p-4">
-                <p className="text-white/70 text-sm">Estimated minutes</p>
-                <p className="text-2xl font-['Montserrat:ExtraBold',sans-serif] font-extrabold">{userData.totalMinutes.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Body: three sections */}
-          <div className="px-10 py-6 grid grid-cols-1 gap-6">
-            {/* Top 5 Songs */}
-            <div>
-              <h2 className="text-[#1db954] text-xl font-['Montserrat:ExtraBold',sans-serif] mb-3">Top 5 Songs</h2>
-              <div className="space-y-3">
-                {(userData.topTracks || []).slice(0,5).map((track: any, idx: number) => (
-                  <div key={track.id || idx} className="flex items-center gap-3">
-                    <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
-                    <div className="w-14 h-14 bg-[#282828] rounded overflow-hidden flex-shrink-0">
-                      {track?.album?.images?.length ? (
-                        <img crossOrigin="anonymous" src={track.album.images[track.album.images.length - 1].url} alt={track.album?.name || 'cover'} className="w-full h-full object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-['Montserrat:SemiBold',sans-serif] truncate">{track?.name}</p>
-                      <p className="text-sm text-white text-opacity-60 truncate">{(track?.artists||[]).map((a:any)=>a.name).join(', ')}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Top 5 Albums */}
-            <div>
-              <h2 className="text-[#1db954] text-xl font-['Montserrat:ExtraBold',sans-serif] mb-3">Top 5 Albums</h2>
-              <div className="space-y-3">
-                {(userData.topAlbums || []).slice(0,5).map((al: any, idx: number) => (
-                  <div key={al.name + idx} className="flex items-center gap-3">
-                    <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
-                    <div className="w-14 h-14 bg-[#282828] rounded overflow-hidden flex-shrink-0">
-                      {al?.image ? (
-                        <img crossOrigin="anonymous" src={al.image} alt={al.name} className="w-full h-full object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-['Montserrat:SemiBold',sans-serif] truncate">{al?.name}</p>
-                      <p className="text-sm text-white text-opacity-60 truncate">{al?.tracks?.length || 0} tracks</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Top 5 Units */}
-            <div>
-              <h2 className="text-[#1db954] text-xl font-['Montserrat:ExtraBold',sans-serif] mb-3">Top 5 Units</h2>
-              <div className="space-y-2">
-                {((userData.unitsList || []).slice().sort((a:any,b:any)=> (b?.count||0) - (a?.count||0)).slice(0,5)).map((u:any, idx:number)=>(
-                  <div key={(u?.name||'unit')+idx} className="flex items-center gap-3">
-                    <span className="w-6 text-white text-opacity-60 font-['Montserrat:ExtraBold',sans-serif]">{idx + 1}</span>
-                    <p className="truncate">
-                      <span className="font-['Montserrat:SemiBold',sans-serif]">{u?.name || 'Unknown'}</span>
-                      <span className="ml-2 text-sm text-white text-opacity-60">{u?.count || 0} songs</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer watermark */}
-          <div className="px-10 pb-6 text-center text-white/40 text-sm">Made with Caratify • innrani.github.io/Caratify</div>
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="px-6 -mt-4 space-y-4 mb-6">
@@ -438,7 +349,7 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
                         {track.name}
                       </p>
                       <p className="text-white text-opacity-60 font-['Montserrat:Medium',sans-serif] text-sm truncate">
-                        {track.artists.map((artist: any) => artist.name).join(', ')}
+                        {track.artists.map((artist) => artist.name).join(', ')}
                       </p>
                       <p className="text-[#1db954] text-opacity-80 font-['Montserrat:Medium',sans-serif] text-xs mt-1">
                         {track.album.name}
@@ -529,8 +440,8 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
               <Card className="bg-gradient-to-r from-[#1db954] to-[#1ed760] border-none p-6 mb-4 text-white">
                 <div className="flex items-center gap-4">
                   {userData.topUnit.tracks && userData.topUnit.tracks.length > 0 && (() => {
-                    const topTrack = userData.topTracks.find((t: any) => 
-                      userData.topUnit?.tracks.includes(t.name)
+                    const topTrack = userData.topTracks.find((track) =>
+                      userData.topUnit?.tracks.includes(track.name)
                     );
                     return topTrack?.album?.images?.length ? (
                       <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
@@ -584,8 +495,8 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
               {userData.unitsList && userData.unitsList.length > 0 ? (
                 <div className="space-y-3 mb-4">
                   {userData.unitsList.map((unit, index) => {
-                    const topTrack = userData.topTracks.find((t: any) => 
-                      unit.tracks && unit.tracks.includes(t.name)
+                    const topTrack = userData.topTracks.find((track) =>
+                      unit.tracks.includes(track.name)
                     );
                     const albumImage = topTrack?.album?.images?.[0]?.url;
                     
@@ -636,9 +547,11 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
                 <div className="text-white text-opacity-40 text-sm bg-[#181818] rounded-lg p-4">
                   <p className="mb-4 text-white text-opacity-60">💡 <strong>SEVENTEEN Units:</strong></p>
                   <p className="text-white text-opacity-70">• <strong>BSS (BOOSEOKSOON)</strong> - Hoshi, DK, Seungkwan</p>
-                  <p className="text-white text-opacity-70">• <strong>JxW (JeonghanxWonwoo)</strong> - Jeonghan, Wonwoo</p>
-                  <p className="text-white text-opacity-70">• <strong>HxW (HoshixWoozi)</strong> - Hoshi, Woozi</p>
-                  <p className="text-white text-opacity-70">• <strong>CxM (S.Coups x Mingyu)</strong> - S.Coups, Mingyu</p>
+                  <p className="text-white text-opacity-70">• <strong>JxW </strong> - Jeonghan, Wonwoo</p>
+                  <p className="text-white text-opacity-70">• <strong>HxW </strong> - Hoshi, Woozi</p>
+                  <p className="text-white text-opacity-70">• <strong>CxM </strong> - S.Coups, Mingyu</p>
+                  <p className="text-white text-opacity-70">• <strong>V8 </strong> - Vernon, THE8</p>
+                  <p className="text-white text-opacity-70">• <strong>JxJ </strong> - Jeonghan, Joshua</p>
                 </div>
               </div>
             </div>
@@ -652,8 +565,6 @@ export function Dashboard({ accessToken, onLogout, onShowAbout }: DashboardProps
           made by @damagebyhoshi on twt
         </p>
       </div>
-      </div>
-      {/* End Capturable Content */}
     </div>
   );
 }
