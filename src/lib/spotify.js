@@ -1,8 +1,8 @@
 ﻿// Configuração da API do Spotify
 export const spotifyConfig = {
   clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID,
-  redirectUri: import.meta.env.VITE_SPOTIFY_REDIRECT_URI || (window.location.hostname === 'localhost'
-    ? "http://localhost:3000"
+  redirectUri: import.meta.env.VITE_SPOTIFY_REDIRECT_URI || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? "http://127.0.0.1:3000"
     : "https://innrani.github.io/Caratify/"),
   scopes: [
     "user-top-read",
@@ -122,6 +122,8 @@ export const getTopTracks = async (accessToken, timeRange = "long_term") => {
     "SEVENTEEN", "SEVENTEEN (세븐틴)",
     "BSS (SEVENTEEN)", "BOOSEOKSOON", "BSS",
     "JxW", "JeonghanxWonwoo", "JEONGHAN X WONWOO",
+    "Hip-Hop Team", "Hip Hop Team", "HipHop Team",
+    "Vocal Team", "Performance Team", "SVT Leaders",
     // solos
     "WOOZI", "우지", "HOSHI", "호시", "MINGYU", "민규",
     "VERNON", "버논", "SEUNGKWAN", "승관", "DINO", "디노",
@@ -163,6 +165,8 @@ export const getRecentlyPlayed = async (accessToken) => {
     "SEVENTEEN", "SEVENTEEN (세븐틴)",
     "BSS (SEVENTEEN)", "BOOSEOKSOON", "BSS",
     "JxW", "JeonghanxWonwoo", "JEONGHAN X WONWOO",
+    "Hip-Hop Team", "Hip Hop Team", "HipHop Team",
+    "Vocal Team", "Performance Team", "SVT Leaders",
     "WOOZI", "우지", "HOSHI", "호시", "MINGYU", "민규",
     "VERNON", "버논", "SEUNGKWAN", "승관", "DINO", "디노",
     "S.COUPS", "에스.쿱스", "JEONGHAN", "정한", "JOSHUA", "조슈아",
@@ -198,33 +202,33 @@ export const computeTopAlbumsFromTracks = (topTracks = []) => {
   return topAlbums;
 };
 export const analyzeSeventeenUnitsFromTracks = (topTracks = []) => {
-  const unitCounts = { 
-    "BSS": { count: 0, tracks: [], totalMinutes: 0 }, 
-    "JxW": { count: 0, tracks: [], totalMinutes: 0 },
-    "HxW": { count: 0, tracks: [], totalMinutes: 0 },
-    "CxM": { count: 0, tracks: [], totalMinutes: 0 }
+  const unitAliases = {
+    "BSS": ["BSS", "BOOSEOKSOON", "BSS (SEVENTEEN)", "부석순"],
+    "JxW": ["JxW", "JEONGHAN X WONWOO", "JEONGHANXWONWOO", "정한X원우"],
+    "HxW": ["HxW", "HOSHI X WOOZI", "HOSHIxWOOZI", "호시X우지"],
+    "CxM": ["CxM", "S.COUPS X MINGYU", "S.COUPSXMINGYU", "SCOUPS X MINGYU"],
+    "Hip-Hop Team": ["HIP-HOP TEAM", "HIP HOP TEAM", "HIPHOP TEAM", "힙합팀"],
+    "Vocal Team": ["VOCAL TEAM", "VOCAL UNIT", "보컬팀"],
+    "Performance Team": ["PERFORMANCE TEAM", "PERFORMANCE UNIT", "퍼포먼스팀"],
+    "Leaders": ["SVT LEADERS", "SEVENTEEN LEADERS", "LEADER LINE", "리더즈"]
   };
+  const unitCounts = Object.fromEntries(
+    Object.keys(unitAliases).map((name) => [name, { count: 0, tracks: [], totalMinutes: 0 }])
+  );
+
   topTracks.forEach(track => {
     const durationMinutes = track.duration_ms / 60000;
-    track.artists.forEach(artist => {
-      const artistName = artist.name.toUpperCase();
-      if (artistName.includes("BSS") || artistName.includes("BOOSEOKSOON")) {
-        unitCounts["BSS"].count += 1;
-        unitCounts["BSS"].tracks.push(track.name);
-        unitCounts["BSS"].totalMinutes += durationMinutes;
-      } else if (artistName.includes("JXW") || (artistName.includes("JEONGHAN") && artistName.includes("WONWOO"))) {
-        unitCounts["JxW"].count += 1;
-        unitCounts["JxW"].tracks.push(track.name);
-        unitCounts["JxW"].totalMinutes += durationMinutes;
-      } else if ((artistName.includes("HOSHI") && artistName.includes("WOOZI")) || artistName.includes("HXW")) {
-        unitCounts["HxW"].count += 1;
-        unitCounts["HxW"].tracks.push(track.name);
-        unitCounts["HxW"].totalMinutes += durationMinutes;
-      } else if ((artistName.includes("S.COUPS") && artistName.includes("MINGYU")) || (artistName.includes("SCOUPS") && artistName.includes("MINGYU")) || artistName.includes("CXM")) {
-        unitCounts["CxM"].count += 1;
-        unitCounts["CxM"].tracks.push(track.name);
-        unitCounts["CxM"].totalMinutes += durationMinutes;
-      }
+    const artistNames = (track.artists || []).map((artist) => artist.name.toUpperCase());
+
+    Object.entries(unitAliases).forEach(([unitName, aliases]) => {
+      const isUnitTrack = artistNames.some((artistName) =>
+        aliases.some((alias) => artistName.includes(alias.toUpperCase()))
+      );
+      if (!isUnitTrack) return;
+
+      unitCounts[unitName].count += 1;
+      unitCounts[unitName].tracks.push(track.name);
+      unitCounts[unitName].totalMinutes += durationMinutes;
     });
   });
   Object.keys(unitCounts).forEach(unit => { unitCounts[unit].totalMinutes = Math.round(unitCounts[unit].totalMinutes); });

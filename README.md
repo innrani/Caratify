@@ -11,6 +11,7 @@ Um aplicativo web que mostra suas estatísticas do Spotify focado no grupo SEVEN
   - Tempo total de escuta estimado
   - Nível Carat baseado no seu consumo
   - Informações sobre artistas favoritos
+  - Estatísticas das units BSS, JxW, HxW, CxM, Hip-Hop Team, Vocal Team, Performance Team e Leaders quando identificadas nos créditos do Spotify
 - 🔐 **Autenticação Segura**: Integração oficial com a API do Spotify usando OAuth 2.0
 - 🎨 **Design Moderno**: Interface inspirada no Spotify com tema dark
 
@@ -26,7 +27,7 @@ Um aplicativo web que mostra suas estatísticas do Spotify focado no grupo SEVEN
 1. Acesse [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Clique em "Create an App"
 3. Preencha os dados do seu app
-4. Em "Redirect URIs", adicione `http://localhost:3000` para desenvolvimento e `https://innrani.github.io/Caratify/` para produção.
+4. Em "Redirect URIs", adicione `http://127.0.0.1:3000` para desenvolvimento e `https://innrani.github.io/Caratify/` para produção.
 5. Salve e copie o **Client ID**. O projeto usa Authorization Code com PKCE no navegador e não precisa do Client Secret.
 
 ### 3. Configuração do Projeto
@@ -49,7 +50,7 @@ cp .env.example .env
 
 # Edite o arquivo .env com o Client ID do seu app
 VITE_SPOTIFY_CLIENT_ID=seu_client_id_aqui
-VITE_SPOTIFY_REDIRECT_URI=http://localhost:3000
+VITE_SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000
 ```
 
 ### 4. Executar o Projeto
@@ -58,7 +59,7 @@ VITE_SPOTIFY_REDIRECT_URI=http://localhost:3000
 npm run dev
 ```
 
-O projeto estará disponível em `http://localhost:3000`
+O projeto estará disponível em `http://127.0.0.1:3000`
 
 ## 🔒 Segurança
 
