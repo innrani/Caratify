@@ -26,7 +26,14 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        env:
+          VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
+        run: |
+          if [ -z "$VITE_SPOTIFY_CLIENT_ID" ]; then
+            echo "::error::Add VITE_SPOTIFY_CLIENT_ID to the repository Actions secrets."
+            exit 1
+          fi
+          npm run build
 
       - name: Add .nojekyll file
         run: touch ./build/.nojekyll

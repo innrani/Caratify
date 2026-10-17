@@ -29,6 +29,7 @@ Um aplicativo web que mostra suas estatísticas do Spotify focado no grupo SEVEN
 3. Preencha os dados do seu app
 4. Em "Redirect URIs", adicione `http://127.0.0.1:3000` para desenvolvimento e `https://innrani.github.io/Caratify/` para produção.
 5. Salve e copie o **Client ID**. O projeto usa Authorization Code com PKCE no navegador e não precisa do Client Secret.
+6. Para o deploy publicado, adicione o Client ID nos secrets do repositório GitHub em **Settings → Secrets and variables → Actions → New repository secret**, com o nome `VITE_SPOTIFY_CLIENT_ID`.
 
 ### 3. Configuração do Projeto
 
@@ -63,7 +64,8 @@ O projeto estará disponível em `http://127.0.0.1:3000`
 
 ## 🔒 Segurança
 
-- ✅ Client Secret configurado via variáveis de ambiente
+- ✅ OAuth usa Authorization Code com PKCE e não requer Client Secret
+- ✅ Client ID fornecido ao build publicado pelo secret do GitHub Actions
 - ✅ `.env` incluído no `.gitignore`
 - ✅ Tokens armazenados localmente no browser
 - ✅ Autenticação oficial via OAuth 2.0
