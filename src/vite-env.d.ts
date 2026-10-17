@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 // Type declarations for media files
 declare module "*.png" {
   const value: string;

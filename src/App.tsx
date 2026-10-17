@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { About } from './components/About';
-import { getAuthUrl } from './lib/spotify';
+import { exchangeCodeForToken, getAuthUrl } from './lib/spotify';
 import imgSpotifyIconRgbGreen1 from './assets/3f5307bc3f8e6eaf876598d93b353dba861d6964.png';
 import imgSeventeenLogo from './assets/e84bdcd9518a5176b49e35565aeab2227bae9fb8.png';
 
@@ -11,66 +11,61 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showAboutPage, setShowAboutPage] = useState(false);
 
-  // Verificar se há um token no hash da URL (Implicit Grant Flow)
   useEffect(() => {
-    console.log('🔍 Checking authentication...');
-    
-    // Check hash for token (Implicit Grant)
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get('access_token');
-      const error = params.get('error');
+    const initializeAuth = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const authError = params.get('error');
 
-      if (error) {
-        console.error('❌ Authentication error:', error);
-        alert('Spotify authentication error. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      if (token) {
-        console.log('✅ Token recebido via Implicit Grant!');
-        setAccessToken(token);
-        setIsLoggedIn(true);
-        
-        // Salvar token e timestamp
-        localStorage.setItem('spotify_access_token', token);
-        localStorage.setItem('spotify_token_timestamp', Date.now().toString());
-        
-        // Limpar hash da URL
+      if (code || authError) {
         window.history.replaceState({}, document.title, window.location.pathname);
-        setLoading(false);
+      }
+
+      if (authError) {
+        localStorage.removeItem('spotify_code_verifier');
+        localStorage.removeItem('spotify_auth_state');
+        throw new Error(`O Spotify recusou a autenticação: ${authError}`);
+      }
+
+      if (code) {
+        const tokenResponse = await exchangeCodeForToken(code, params.get('state'));
+        localStorage.setItem('spotify_access_token', tokenResponse.access_token);
+        localStorage.setItem('spotify_token_timestamp', Date.now().toString());
+        setAccessToken(tokenResponse.access_token);
+        setIsLoggedIn(true);
         return;
       }
-    }
 
-    // Verificar se há um token salvo no localStorage
-    const savedToken = localStorage.getItem('spotify_access_token');
-    const tokenTimestamp = localStorage.getItem('spotify_token_timestamp');
-    
-    if (savedToken && tokenTimestamp) {
-      // Verificar se o token expirou (tokens do Spotify duram 1 hora = 3600000ms)
-      const tokenAge = Date.now() - parseInt(tokenTimestamp);
-      const oneHour = 3600000;
-      
-      if (tokenAge < oneHour) {
-        console.log('✅ Token válido encontrado no localStorage');
-        setAccessToken(savedToken);
-        setIsLoggedIn(true);
-      } else {
-        console.log('⚠️ Token expirado, removendo...');
-        localStorage.removeItem('spotify_access_token');
-        localStorage.removeItem('spotify_token_timestamp');
+      const savedToken = localStorage.getItem('spotify_access_token');
+      const tokenTimestamp = localStorage.getItem('spotify_token_timestamp');
+
+      if (savedToken && tokenTimestamp) {
+        const tokenAge = Date.now() - Number.parseInt(tokenTimestamp, 10);
+        if (tokenAge < 3600000) {
+          setAccessToken(savedToken);
+          setIsLoggedIn(true);
+        } else {
+          localStorage.removeItem('spotify_access_token');
+          localStorage.removeItem('spotify_token_timestamp');
+        }
       }
-    }
-    setLoading(false);
+    };
+
+    initializeAuth()
+      .catch((error) => {
+        console.error('Spotify authentication failed:', error);
+        alert(error instanceof Error ? error.message : 'Falha na autenticação com o Spotify.');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleLogin = () => {
-    // Redirect to Spotify OAuth
-    const authUrl = getAuthUrl();
-    window.location.href = authUrl;
+  const handleLogin = async () => {
+    try {
+      window.location.href = await getAuthUrl();
+    } catch (error) {
+      console.error('Could not start Spotify authentication:', error);
+      alert(error instanceof Error ? error.message : 'Não foi possível iniciar o login com o Spotify.');
+    }
   };
 
   const handleLogout = () => {

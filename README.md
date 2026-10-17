@@ -26,8 +26,8 @@ Um aplicativo web que mostra suas estatísticas do Spotify focado no grupo SEVEN
 1. Acesse [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Clique em "Create an App"
 3. Preencha os dados do seu app
-4. Em "Redirect URIs", adicione: `http://localhost:3000/callback`
-5. Salve e copie o **Client ID** e **Client Secret**
+4. Em "Redirect URIs", adicione `http://localhost:3000` para desenvolvimento e `https://innrani.github.io/Caratify/` para produção.
+5. Salve e copie o **Client ID**. O projeto usa Authorization Code com PKCE no navegador e não precisa do Client Secret.
 
 ### 3. Configuração do Projeto
 
@@ -47,10 +47,9 @@ npm install
 # Copie o arquivo de exemplo
 cp .env.example .env
 
-# Edite o arquivo .env com suas credenciais reais
+# Edite o arquivo .env com o Client ID do seu app
 VITE_SPOTIFY_CLIENT_ID=seu_client_id_aqui
-VITE_SPOTIFY_CLIENT_SECRET=seu_client_secret_aqui
-VITE_SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
+VITE_SPOTIFY_REDIRECT_URI=http://localhost:3000
 ```
 
 ### 4. Executar o Projeto

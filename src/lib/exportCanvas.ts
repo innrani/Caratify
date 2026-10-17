@@ -1,6 +1,3 @@
-// Lightweight canvas-based poster export to avoid DOM screenshot issues
-// Generates a 1080x1350 PNG with key stats only (no remote album covers to avoid CORS)
-
 export interface ExportUserData {
   caratLevel?: string;
   totalMinutes: number;

@@ -1,24 +1,78 @@
 ﻿// Configuração da API do Spotify
 export const spotifyConfig = {
-  clientId: "adefef0cb2e14e139ee5bcb1ec9e47c4",
-  redirectUri: window.location.hostname === 'localhost' 
+  clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID,
+  redirectUri: import.meta.env.VITE_SPOTIFY_REDIRECT_URI || (window.location.hostname === 'localhost'
     ? "http://localhost:3000"
-    : "https://innrani.github.io/Caratify/",
+    : "https://innrani.github.io/Caratify/"),
   scopes: [
     "user-top-read",
     "user-read-recently-played",
     "user-library-read",
   ].join(" ")
 };
-export const getAuthUrl = () => {
+const toBase64Url = (bytes) =>
+  btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+export const getAuthUrl = async () => {
+  if (!spotifyConfig.clientId || spotifyConfig.clientId === "seu_client_id_aqui") {
+    throw new Error("Configure VITE_SPOTIFY_CLIENT_ID no arquivo .env antes de entrar.");
+  }
+
+  const verifier = toBase64Url(crypto.getRandomValues(new Uint8Array(64)));
+  const challengeBytes = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(verifier)
+  );
+  const challenge = toBase64Url(new Uint8Array(challengeBytes));
+  const state = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+
+  localStorage.setItem("spotify_code_verifier", verifier);
+  localStorage.setItem("spotify_auth_state", state);
+
   const params = new URLSearchParams({
     client_id: spotifyConfig.clientId,
-    response_type: "token",
+    response_type: "code",
     redirect_uri: spotifyConfig.redirectUri,
     scope: spotifyConfig.scopes,
+    code_challenge_method: "S256",
+    code_challenge: challenge,
+    state,
     show_dialog: "true"
   });
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
+};
+
+export const exchangeCodeForToken = async (code, returnedState) => {
+  const verifier = localStorage.getItem("spotify_code_verifier");
+  const expectedState = localStorage.getItem("spotify_auth_state");
+  localStorage.removeItem("spotify_code_verifier");
+  localStorage.removeItem("spotify_auth_state");
+
+  if (!verifier || !expectedState || returnedState !== expectedState) {
+    throw new Error("A validação do login falhou. Tente entrar novamente.");
+  }
+
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: spotifyConfig.clientId,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: spotifyConfig.redirectUri,
+      code_verifier: verifier
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error_description || "Não foi possível concluir o login com o Spotify.");
+  }
+
+  return response.json();
 };
 // Small helper to make Spotify requests more resilient (retry once on 401/429/transient errors)
 const spotifyFetch = async (url, accessToken, opts = {}) => {

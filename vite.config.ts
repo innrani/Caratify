@@ -3,10 +3,10 @@
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
 
-  export default defineConfig({
+  export default defineConfig(({ command }) => ({
     // Base path for GitHub Pages (assumed repo name 'Caratify').
     // If your repo name is different, change this to '/SEU_REPO/'.
-    base: '/Caratify/',
+    base: command === 'serve' ? '/' : '/Caratify/',
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -62,4 +62,4 @@
       port: 3000,
       open: true,
     },
-  });
+  }));
